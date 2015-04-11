@@ -1,0 +1,21 @@
+First, I tested a file with 480 lines:
+For srot13u,
+    real	0m0.007s
+    user	0m0.001s
+    sys		0m0.005s
+For srot13,
+    real	0m0.003s
+    user	0m0.001s
+    sys		0m0.001s
+Then I run the bigfile that I created in the lab ( > 5Mb):
+For srot13u,
+    real	0m9.836s
+    user	0m0.580s
+    sys		0m8.063s
+For srot13,
+    real	0m5.520s
+    user	0m0.527s
+    sys		0m0.072s
+From above values, we can see that srot13u takes about twice 'real' time
+as srot13, and they have similar 'user' time. But, they have totally different
+'sys' time. srot13u takes much more 'sys' time than srot13.

@@ -1,0 +1,16 @@
+#!/bin/bash
+grep -o "<td>.*</td>" \
+| tr '[:upper:]' '[:lower:]' \
+| sed 's/<td>//g' \
+| sed 's/<\/td>//g' \
+| sed '/^$/d' \
+| sed 's/<small>//g' \
+| sed 's/<\/small>//g' \
+| sed 's/<u>//g' \
+| sed 's/<\/u>//g' \
+| sed -n 0~2p \
+| sed 's/`/\x27/g' \
+| sed 's/,/\n/g' \
+| sed 's/ /\n/g' \
+| grep -o ^[pk\'mnwlhaeiou]*$ \
+| sort -u

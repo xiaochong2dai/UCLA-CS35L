@@ -1,0 +1,142 @@
+1.
+For catb.c, 
+I used a do while loop to read with getchar() until the end of file.
+In the loop, I used putchar(char) to output each character.
+2.
+For catu.c,
+I used a while loop, and instead of getchar() and putchar(), I used read() 
+and write().
+Using read(0, &c, 1), I can read a character each time starting from beginning 
+until the end.
+Inside the loop, I used write(1, &c , 1) to output each character.
+3.
+For this part, I used strace to compare the # of reads and writes.
+The size of my big file is 6397322 bytes.
+I compiled catb.c and catu.c with the below commands:
+gcc catb.c -o catb
+gcc catu.c -o catu
+(a) when copying one file to another:
+I used below commands:
+     strace -co strace_output ./catb < bigfile.txt > catbtest.txt
+     strace -co strace_output ./catu < bigfile.txt > catutest.txt
+These commands output the # of reads and writes. ( -c count #)
+For catb:
+the strace output is as below:
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 92.23    0.001566          16       100           read
+  4.77    0.000081           1        98           write
+  3.00    0.000051          26         2           open
+  0.00    0.000000           0         2           close
+  0.00    0.000000           0         4           fstat
+  0.00    0.000000           0        10           mmap
+  0.00    0.000000           0         3           mprotect
+  0.00    0.000000           0         1           munmap
+  0.00    0.000000           0         1           brk
+  0.00    0.000000           0         1         1 access
+  0.00    0.000000           0         1           execve
+  0.00    0.000000           0         1           arch_prctl
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.001698                   224         1 total
+We can see:
+    100            read
+    98             write
+total 224 system calls
+For catu:
+the strace output is as below:
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 58.50    0.555798           0   6397322           write
+ 41.50    0.394320           0   6397324           read
+  0.00    0.000018           6         3           mprotect
+  0.00    0.000000           0         2           open
+  0.00    0.000000           0         2           close
+  0.00    0.000000           0         2           fstat
+  0.00    0.000000           0         8           mmap
+  0.00    0.000000           0         1           munmap
+  0.00    0.000000           0         1           brk
+  0.00    0.000000           0         1         1 access
+  0.00    0.000000           0         1           execve
+  0.00    0.000000           0         1           arch_prctl
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.950136              12794668         1 total
+we can see:
+    6397324        read
+    6397322        write
+total 12794668 system calls
+(b)
+For part b, I basically didn't output the file, just output to terminal:
+    strace -co strace_output ./catb < bigfile.txt
+    strace -co strace_output ./catu < bigfile.txt
+For catb:
+the strace output is as below:
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.005739           0     23039           write
+  0.00    0.000000           0       100           read
+  0.00    0.000000           0         2           open
+  0.00    0.000000           0         2           close
+  0.00    0.000000           0         4           fstat
+  0.00    0.000000           0        10           mmap
+  0.00    0.000000           0         3           mprotect
+  0.00    0.000000           0         1           munmap
+  0.00    0.000000           0         1           brk
+  0.00    0.000000           0         1         1 access
+  0.00    0.000000           0         1           execve
+  0.00    0.000000           0         1           arch_prctl
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.005739                 23165         1 total
+we can see:
+    23039           write
+    100             read
+total 23165 system calls
+For catu:
+the strace output is as below:
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 55.51    0.269589           0   6397322           write
+ 44.49    0.216033           0   6397324           read
+  0.00    0.000000           0         2           open
+  0.00    0.000000           0         2           close
+  0.00    0.000000           0         2           fstat
+  0.00    0.000000           0         8           mmap
+  0.00    0.000000           0         3           mprotect
+  0.00    0.000000           0         1           munmap
+  0.00    0.000000           0         1           brk
+  0.00    0.000000           0         1         1 access
+  0.00    0.000000           0         1           execve
+  0.00    0.000000           0         1           arch_prctl
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.485622              12794668         1 total
+we can see:
+    6397322         write
+    6397324         read
+total 12794668 system calls
+We can see that the catu function needs much more reads and writes given a big file.
+4.
+I used the time command to check the time for each of the commands to run the big file.
+I used the following commands to copy file data to terminal:
+  time ./catb < bigfile.txt 
+  time ./catu < bigfile.txt 
+For catb, I got the following times:
+    real  0m4.872s
+    user  0m0.229s
+    sys	  0m0.123s
+For catu, I got the following times:
+    real  0m8.887s
+    user  0m0.292s
+    sys	  0m8.583s
+From above time, we can compare catb and catu:
+for 'real' time, catb is 1 time faster than catu ( 2 times as fast as catu). 
+for 'user' time, catb is just a little bit faster than catu ( almost the same).
+for 'sys' time, catb is about 70 time faster than catu.
+Then I did the below to write time into files, and got time as below:
+time ./catb < bigfile.txt > timeb
+     real 0m0.324s
+     user 0m0.197s
+     sys  0m0.009s
+time ./catu < bigfile.txt > timeu
+     real 0m6.921s
+     user 0m0.350s
+     sys  0m6.472s
+As expected, catu takes much more time than catb if writing data into files.

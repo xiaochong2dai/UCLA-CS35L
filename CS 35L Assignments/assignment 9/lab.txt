@@ -1,0 +1,200 @@
+1. I downloaded sthttpd 2.27.0 using wget:
+wget http://www.cs.ucla.edu/classes/winter15/cs35L/assign/sthttpd-2.27.0.tar.gz
+Then I unzipped the file by:
+tar xvf sthttpd-2.27.0.tar.gz
+From the patch file, I saw only one line was changed, so I just used
+emacs to open the sthttpd-2.27.0/src/thttpd.c, and went to 1604th line,
+and manually changed "hc->read_size - hc->read_idx );" to "hc->read_size );"
+In the 'Makefile', I added '-fno-stack-protector' as an option of CFLAGS,
+then I run ./configure and make.
+
+2. I went to the src folder and I run: ./thttpd -p 12186
+I used 'ps aux | grep thttpd' and checked no one else is using the same
+port as me.
+I did a simple request as: wget http://localhost:12186
+and I got below message:
+--2015-03-02 15:41:41--  http://localhost:12186/
+Resolving localhost... 127.0.0.1
+Connecting to localhost|127.0.0.1|:12186... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: unspecified [text/html]
+Saving to: “index.html”
+
+    [ <=>                                                                  ] 2,751       --.-K/s   in 0.008s
+
+2015-03-02 15:41:41 (328 KB/s) - “index.html” saved [2751]
+And I saw a file 'index.html' was downloaded.
+
+3&4. I opened 2 terminals and SSH into the same lnxsrv on both ( I used lnxsrv02 ).
+Then I run: ./thttpd -p 12186
+and I found the PID using: ps aux | grep thttpd, and the PID is 19949.
+Then I run the gdb as below:
+$ gdb
+$ (gdb) attach 19949
+Then I got the below message:
+Attaching to process 19949
+In the 'handle_read()' function, I saw there is a if statement where check the read_size:
+'if ( hc->read_size > 5000 )', I guess this is the amount of A's we need to make the server crash.
+Therefore, in 2nd terminal, I sent my crashing request using wget as below:
+wget http://localhost:12186/AAAA...A (I used 5001 A's)
+Then in the 2nd terminal, I saw
+"Connecting to localhost|127.0.0.1|:12186... connected.
+HTTP request sent, awaiting response..."
+Then in the 1st terminal, I entered 'c', then I got this:
+"Program received signal SIGSEGV, Segmentation fault.
+0x0000003cb5479afd in _int_malloc () from /lib64/libc.so.6"
+Then I entered 'bt' and I got:
+#0  0x0000003cb5479afd in _int_malloc () from /lib64/libc.so.6
+#1  0x0000003cb547a346 in calloc () from /lib64/libc.so.6
+#2  0x0000003cb546ef2d in open_memstream () from /lib64/libc.so.6
+#3  0x0000003cb54e4a1b in __vsyslog_chk () from /lib64/libc.so.6
+#4  0x0000003cb547048e in __libc_message () from /lib64/libc.so.6
+#5  0x0000003cb5475e66 in malloc_printerr () from /lib64/libc.so.6
+#6  0x0000003cb547b937 in _int_realloc () from /lib64/libc.so.6
+#7  0x0000003cb547baf5 in realloc () from /lib64/libc.so.6
+#8  0x0000000000406498 in httpd_realloc_str (strP=0x1e2eb10, maxsizeP=0x1e2eb18, size=<value optimized out>)
+    at libhttpd.c:715
+#9  0x00000000004047e7 in handle_read (argc=<value optimized out>, argv=<value optimized out>)
+    at thttpd.c:1600
+#10 main (argc=<value optimized out>, argv=<value optimized out>) at thttpd.c:806
+From the backtrace we can see that lib64/libc.so.6 was involved in the buffer overflow crash.
+
+5. The exploit will place some machine code into the string passed in after
+http://localhost:12186/string_passed_in so that it can make the return address of the 
+function return to some arbitrary position that contains our code.
+
+6. In order to create assembly language files (.s files), I firstly removed the .o file:
+$ rm thttpd.o
+Then I edited the Makefile in emacs, and I search for ‘CFLAGS’ flag:
+$ emacs Makefile
+I add -S after -O2, so I have 'CFLAGS = -O2 –S', then I saved and quit.
+I make the removed .o file:
+$ make thttpd.o
+I saw the new 'thttpd.o' is created with assembly code in it.
+Then I run the commands: CC=gcc CFLAGS='-fno-stack-protector' ./configure
+and CC=gcc CFLAGS='-fno-stack-protector' make, but I got some errors.
+Instead, I run these below commands inside the "src" folder:
+gcc -m32 -c -S -o thttpd-nostackprot.s -fno-stack-protector -I . -I ../ thttpd.c
+gcc -m32 -c -S -o thttpd-stackprot.s -fstack-protector -I . -I ../ thttpd.c
+And I found both thttpd-nostackprot.s and thttpd-stackprot.s are created.
+I opened the thttpd-stackprot.s, and I found there are 5288 lines of code,
+and the thttpd-nostackprot.s has only 5235 lines of code.
+On the other hand, I used the below command:
+diff thttpd-nostackprot.s thttpd-stackprot.s | grep call
+and I got below:
+>    call		  __stack_chk_fail
+>    call		  __stack_chk_fail
+>    call		  __stack_chk_fail
+>    call		  __stack_chk_fail
+From here we see that thttpd-stackprot.s does try to call a check on the stack to see if it 
+has failed. It's clear to see that thttpd-stackprot.s is less efficent since it has more code, and 
+calls more functions. But at the same time, call the __stack_chk_fail is the most important part 
+of preventing buffer overflow.
+
+7. In order to get access to GCC 4.9.2, I changed the path:
+export PATH=/usr/local/cs/bin:$PATH 
+Then I downloaded the  sthttpd 2.27.0. again and applied the patch. 
+I run the the below commands to configure and make:
+./configure
+CC="gcc -m32" CFLAGS="-fsanitize=address -fstack-protector" LDFLAGS="-Xlinker --rpath=/usr/local/cs/gcc-$(gcc -dumpversion)/lib" make
+Then I basiclly redid the step 3&4:
+I opened two terminals and used server lnxsrv02,
+In the first terminal I run: ./thttpd -p 12176
+and I found the PID using: ps aux | grep thttpd, and the PID is 8511.
+Then I run the gdb as below:
+$ gdb
+$ (gdb) attach 8511
+Then in the gdb I first set a breakpoint in the __asan_report_error: 
+b __asan_report_error
+Then I got the message: 
+Breakpoint 1 at 0x9fdf90: file ../../../../../gcc-4.9.2/libsanitizer/asan/asan_report.cc, line 711.
+Then in the 2nd terminal, I run:
+wget http://localhost:12186/AAAA...A (I used 5001 A's)
+Then in the 1st terminal, I entered 'c', and I got below message:
+Program received signal SIGABRT, Aborted.
+0x00624430 in __kernel_vsyscall ()
+Using 'bt', I got the traceback:
+#0  0x00624430 in __kernel_vsyscall ()
+#1  0x001e9871 in raise () from /lib/libc.so.6
+#2  0x001eb14a in abort () from /lib/libc.so.6
+#3  0x0804ac1b in handle_alrm ()
+#4  <signal handler called>
+#5  0x00624430 in __kernel_vsyscall ()
+#6  0x00296c1b in poll () from /lib/libc.so.6
+#7  0x009ca3e0 in poll ()
+    at ../../../../../gcc-4.9.2/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:2029
+#8  0x08055b6d in poll_watch ()
+#9  0x08055451 in fdwatch ()
+#10 0x0804c3b5 in main ()
+Then I did one more time without setting breakpoint. I got this:
+Program exited with code 01.
+Then I did 'bt', and was told 'No stack.'
+Also, the 2nd terminal said:
+Connecting to localhost|127.0.0.1|:12176... failed: Connection refused.
+As a dynamic memory error detector, address sanitizer helps more for detecting heap OOB, stack OOB and global OOB for 
+both writes and reads.
+
+8. I run the below command to generate the thttpd-sanitize.s:
+gcc -m32 -c -S -o thttpd-sanitize.s -fsanitize=address -fstack-protector -I . -I ../ thttpd.c 
+Then I found thttpd-sanitize.s was generated.
+Then using the command: diff thttpd-stackprot.s thttpd-sanitize.s | grep call
+I saw a lot more fuctions being called in thttpd-sanitize.s like: 
+>     call  __asan_handle_no_return
+>     call  __asan_stack_malloc_1
+>     call  __asan_report_load4
+>     call  __asan_report_load4
+>     call  __asan_report_load4
+>     call  __asan_report_load4
+>     call  __asan_report_load4
+>     call  __asan_report_load4
+.
+.
+.
+>	call	__asan_report_store4
+> 	call	__asan_stack_malloc_1
+> 	call	__asan_report_load4
+> 	call	__asan_unregister_globals
+> 	call	__asan_init_v3
+> 	call	__asan_register_globals 
+So we can see thttpd-sanitize.s is less efficent since it has much more function calls than thttpd-stackprot.s.
+On the other hand, this is where the difference between these them. The extra functions like __asan_report_ and 
+__asan_register_ will help us with debugging buffer overflow and other possible vulnerabilities.
+
+9. In the server within the src folder, I run: valgrind --leak-check=yes ./thttpd –p 12186
+Then I got the below message:
+==15033== Memcheck, a memory error detector
+==15033== Copyright (C) 2002-2012, and GNU GPL'd, by Julian Seward et al.
+==15033== Using Valgrind-3.8.1 and LibVEX; rerun with -h for copyright info
+==15033== Command: ./thttpd –p 12194
+==15033== 
+usage:  ./thttpd [-C configfile] [-p port] [-d dir] [-r|-nor] [-dd data_dir] [-s|-nos] [-v|-nov] [-g|-nog] [-u user] [-c cgipat] [-t throttles] [-h host] [-l logfile] [-i pidfile] [-T charset] [-P P3P] [-M maxage] [-V] [-D]
+==15033== 
+==15033== HEAP SUMMARY:
+==15033==     in use at exit: 0 bytes in 0 blocks
+==15033==   total heap usage: 0 allocs, 0 frees, 0 bytes allocated
+==15033== 
+==15033== All heap blocks were freed -- no leaks are possible
+==15033== 
+==15033== For counts of detected and suppressed errors, rerun with: -v
+==15033== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 6 from 6)
+with command: ps aux | grep thttpd, I got the pid 10069
+After running gdb and attch 10069, I used wget and 5000 A's in the 2nd terminal.
+In the 1st terminal, I entered 'c', and I got Segmentation fault as below:
+Program received signal SIGSEGV, Segmentation fault.
+get_bszB_as_is (aid=3, cc=0x382a324e "replacemalloc.cm.1", req_pszB=<value optimized out>) at m_mallocfree.c:291
+291     m_mallocfree.c: No such file or directory.
+        in m_mallocfree.c
+With the 'bt' command, I got:
+#0  get_bszB_as_is (aid=3, cc=0x382a324e "replacemalloc.cm.1", req_pszB=<value optimized out>) at m_mallocfree.c:291
+#1  get_bszB (aid=3, cc=0x382a324e "replacemalloc.cm.1", req_pszB=<value optimized out>) at m_mallocfree.c:302
+#2  vgPlain_arena_malloc (aid=3, cc=0x382a324e "replacemalloc.cm.1", req_pszB=<value optimized out>)
+    at m_mallocfree.c:1531
+#3  0x000000003800386b in vgMemCheck_realloc (tid=1, p_old=0x4c6c670, new_szB=4001) at mc_malloc_wrappers.c:490
+#4  0x000000003807a0ae in do_client_request (tid=1) at m_scheduler/scheduler.c:1673
+#5  vgPlain_scheduler (tid=1) at m_scheduler/scheduler.c:1328
+#6  0x00000000380a5a2a in thread_wrapper (tidW=1) at m_syswrap/syswrap-linux.c:103
+#7  run_a_thread_NORETURN (tidW=1) at m_syswrap/syswrap-linux.c:156
+#8  0x0000000000000000 in ?? ()
+This is as I expected. Since Valgrind checks memory leaks, use of uninitialized memory, and heap/stack buffer overrun,
+also profiling. We can see functions like get_bszB, vgMemCheck_realloc are called to prevent memory and overflow
+issue, which makes this version of thttpd more secure.

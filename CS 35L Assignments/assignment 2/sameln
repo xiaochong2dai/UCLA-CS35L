@@ -1,0 +1,38 @@
+#!/bin/bash
+
+D=$1
+#use two counter to track the inner and outer loop
+count1=0
+count2=1
+
+#use an array to store all the regular file names under the directory
+declare -a MyArray
+MyArray=($(find $D -maxdepth 1 -type f | sort))
+ArraySize=${#MyArray[@]}
+
+#check if the directory is empty
+if [ $ArraySize -eq 0 ]
+then
+    echo "Empty Directory or no regular file."
+    exit 0
+fi
+
+while [ $count1 -lt $ArraySize ]
+do
+    FirstFile=${MyArray[$count1]}
+    while [ $count2 -lt $ArraySize ]
+    do
+	SecondFile="${MyArray[count2]}"
+#compare two file names, and if files are duplicates, 
+#delete the later one and create hard link
+	if cmp -s "$FirstFile" "$SecondFile"
+	then
+            rm "$SecondFile"
+	    ln "$FirstFile" "$SecondFile"
+	fi
+	count2=$((count2+1))
+    done
+    count1=$((count1+1))
+#after finishing the inner loop, restart inner counter from outer counter+1 
+    count2=$((count1+1))
+done

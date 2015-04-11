@@ -1,0 +1,43 @@
+Q1. In the patch we can see that "case_long_iso_time_style:" is 
+actually a goto statement. And this goto statemet is removed 
+together with the for loop. It was not necessary to remove this 
+line, but it would make the code messy and condusing if not removed.
+
+Q2. I was worrying about the date might not be in the right format 
+in non English countries. SO I made a test by 'export LC_ALL=zh_CN.UTF-8', 
+which changed all the locale variables to Chinese - Simplified format. 
+Then I realized the output date is good. I searched from google and 
+found the function in the 'ls.c' dcgettext() helps to translate text 
+strings into the user's native language. Therefore, the modified 'ls' 
+should not have a language problem.
+
+Q3. I tried runing an empty file as below:
+    python ./randline.py /dev/null
+and I got the below message:
+    "Traceback (most recent call last):
+    File "./randline.py", line 70, in <module>
+    main()
+    File "./randline.py", line 64, in main
+    sys.stdout.write(generator.chooseline())
+    File "./randline.py", line 34, in chooseline
+    return random.choice(self.lines)
+    File "/usr/lib64/python2.6/random.py", line 261, in choice
+    return seq[int(self.random() * len(seq))]  # raises 
+    IndexError if seq is empty
+    IndexError: list index out of range"
+The reason is we are invoking randline.py with an empty file, where no 
+line can be found. Therefore, the program cannot select any lines.
+
+Q4. I run the below two commands:
+    python3 ./randline.py testfile
+    python3 ./randline.py -n3 testfile
+and I got the below message:
+    "File "./randline.py", line 65
+    except IOError as (errno, strerror):
+    SyntaxError: invalid syntax"
+The reason is that exceptions in Python 2 are iterable, and that you can 
+iterate over the parameters given to the exception by iterating over the 
+exception itself. While in Python3, this is not allowed. We can as below:
+    except IOError as err:
+    Then we can examine err for attributes like errno, strerror, etc. Like:
+    errno, strerror = err.args

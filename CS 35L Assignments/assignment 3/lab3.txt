@@ -1,0 +1,48 @@
+1. I used wget to fetch the compressed file with the below command:
+   wget ftp://ftp.gnu.org/gnu/coreutils/coreutils-7.6.tar.gz
+   Then I extracted files by:
+   tar -xzvf coreutils-7.6.tar.gz
+   and I saw a folder coreutils-7.6   
+2. I created a temporary directory coreutilsInstall by the command:
+   mkdir coreutilsInstall
+3. In the coreutils-7.6 directory, I run the configure as below:
+   ./configure --prefix=/w/home.02/cs/ugrad/guan/coreutilsInstall
+   (I used readlink -f filename to get the absolute path of the directory)
+4. The I compiled it using 'make', and installed it using 'make install'.
+5. Then in the coreutilsInstall folder, there are three subfolders, 
+bin  lib  share. using cd bin, and inside bin, I saw the 'ls' command. 
+Both inside the bin folder and coreutils-7.6/src folder, I reproduced 
+the bug by running the command as below:
+   ./ls -l /bin/bash
+   I got a result as:
+   -rwxr-xr-x 1 root root 940416 2014-09-26 03:29 /bin/bash
+6. cd coreutils-7.6, and I used emacs to copy the patch file from the web page 
+that was given, and saved this file as patch_file. Then I run the below command:
+   patch -p1 < patch_file
+   Then I got the below message:
+   "patching file NEWS
+   Hunk #1 succeeded at 397 with fuzz 2 (offset 365 lines).
+   patching file src/ls.c
+   Hunk #1 succeeded at 2013 (offset -1 lines).
+   patch unexpectedly ends in middle of line
+   Hunk #2 succeeded at 2028 with fuzz 1 (offset -1 lines)." 
+7. Then in the coreutils-7.6/src folder, I run 'make' to rebuild 'ls'. 
+After this, inside this folder, I run:
+   ./ls -l /bin/bash
+   and I got the expected result as:
+   -rwxr-xr-x 1 root root 940416 Sep 26 03:29 /bin/bash  
+   Then I went back to the temporary folder coreutilsInstall and inside the 
+bin folder, I run the same command, but it still gives the old result: 
+( -rwxr-xr-x 1 root root 940416 2014-09-26 03:29 /bin/bash)
+8. To test the patched ls on both a new file and an old file that over a 
+year, I used 'touch' command:
+   touch file1 (this gives a new file)
+   touch -t 1205050100 file2 (creates an artficial 'old' file at 
+05/05, 1999, the time 01:00 is not shown)
+   The modified 'ls' gives me:
+   -rw-r--r--  1 guan csugrad        0 Jan 22 00:30 file1
+   -rw-r--r--  1 guan csugrad        0 May  5  2012 file2
+   While the installed 'ls' still gives me:
+   -rw-r--r--  1 guan csugrad        0 2015-01-22 00:30 file1
+   -rw-r--r--  1 guan csugrad        0 2012-05-05 01:00 file2
+   which are expected.  

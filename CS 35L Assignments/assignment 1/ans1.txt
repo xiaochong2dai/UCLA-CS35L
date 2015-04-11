@@ -1,0 +1,161 @@
+Guan Zhou
+604501750
+Assignment 1
+
+1. 
+man -k keyword
+I got this using man man /print
+
+2.
+cp is located at /bin/cp
+wc is located at /usr/bin/wc
+I got this using whereis cp whereis wc
+
+3.
+/usr/bin/w
+/usr/bin/[
+/usr/bin/X
+X - a portable, network-transparent window system
+w - see who is logged in and what they are doing
+[ - shell related program and no man pages 
+First I did echo $PATH, and several folders /usr/lib64/qt-3.3/bin:
+/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/opt/dell/srvadmin/bin:
+/u/cs/ugrad/guan/bin
+Then I did find FOLDER_NAME -executable -name ? for each folder,
+then man executable programs 
+
+4.
+gcc
+I got this by man /usr/bin/cc
+
+5. 
+g-s: removes the sgid(set group ID) mode 
+I got this by man chmod
+
+6.
+find / -type f -mtime -3
+I got this by man find /day
+/modified
+
+7.
+find / -type d -mtime -3
+
+8.
+354 for /usr/bin
+18 for /bin
+man find
+/symbolic
+/-type
+whereis find, I got two directories /usr/bin /bin
+find -type l | wc -l
+
+9.
+-rwxr-xr-x  1 root root   587364 Nov 24  2009 
+libsqlite3.so.0.8.6
+ls -t: sort by modification time, newest first,
+ last one in list is the oldest
+ls -l: gives the detialed info including
+modification date of all files
+cd /
+cd /usr/lib
+ls -t -l
+
+10.
+The LC_* environment variables
+I got the answer from man locale
+
+11.
+Buffer-menu-sort 
+Buffer-menu-sort-by-column
+ibuffer-invert-sorting
+ibuffer-toggle-sorting-mode
+rmail-sort-by-author
+rmail-sort-by-correspondent
+rmail-sort-by-date
+rmail-sort-by-labels
+rmail-sort-by-author  
+rmail-sort-by-correspondent
+rmail-sort-by-date
+rmail-sort-by-labels
+rmail-sort-by-lines
+rmail-sort-by-recipient       
+rmail-sort-by-subject 
+sort-columns
+sort-fields
+sort-lines 
+sort-numeric-fields 
+sort-pages
+sort-paragraphs
+sort-regexp-fields
+I got the answer by: 
+emacs
+c-h a
+sort
+
+12.
+C-a runs the command move-beginning-of-line.
+C-b runs the command backward-char.
+C-c interrupts the shell or its current subjob if any.
+C-d runs the command delete-char.
+C-e runs the command move-end-of-line.
+C-f runs the command forward-char.
+C-g runs the command keyboard-quit.
+C-h combines with other commands and gives 
+    information of those commands.
+C-i is a TAB runs the command forward-button.
+C-j runs the command newline-and-indent.
+C-k runs the command kill-line.
+C-l runs the command recenter-top-bottom.
+C-m - Insert a new line and move to it.
+C-n runs the command next-line.
+C-o runs the command open-line.
+C-p runs the command previous-line.
+C-q runs the command quoted-insert.
+C-r runs the command isearch-backward.
+C-s runs the command isearch-forward.
+C-t runs the command transpose-chars.
+C-u runs the command universal-argument.
+C-v runs the command scroll-up-command.
+C-w runs the command kill-region.
+C-x combines with other commands to extend
+    the functionalities.
+C-y runs the command yank.
+C-z runs the command suspend-frame.
+I got the answer by: 
+emacs
+c-h k
+c-a to c-z
+
+13.
+C-g gives a signal a `quit' condition.
+During execution of Lisp code, this character causes a quit directly.
+At top-level, as an editor command, this simply beeps.
+emacs
+c-h k
+c-g
+
+14.
+Reinsert ("paste") the last stretch of killed text.
+More precisely, reinsert the most recent kill, which is the
+stretch of killed text most recently killed OR yanked.  Put point
+at the end, and set mark at the beginning without activating it.
+I got the answer by: 
+emacs
+c-h a
+yank
+
+15.
+Emacs dired command gives more files than the ls -l command,
+it is because dired lists some files in subdirectories, while 
+ls just gives the directories.
+I got this by: 
+emacs
+C-h
+?
+r
+select died and Enter (to see the dire manual)
+
+
+
+
+

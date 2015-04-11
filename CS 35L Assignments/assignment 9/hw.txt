@@ -1,0 +1,99 @@
+HW part1:
+
+1. I set up an EC2 environment based on the instruction.
+   Then chmod 400 key.pem
+   ssh -i key.pem ubuntu@ec2-52-10-158-129.us-west-2.compute.amazonaws.com
+   The 32 bit ubuntu I got was from community ami.
+
+2. Then I redownloaded the sthttpd 2.27.0 to the EC2 server, and extracted it out.
+   Then copied the patch into a file called 'patch_file', and applied
+   the patch:
+   patch -p1 < ../patch_file
+
+3. First, I installed gcc:
+   sudo apt-get update
+   sudo apt-get install gcc
+   Then I run ./configure and make
+
+4. Then I opened the 2nd terminal and also logged into amazon EC2.
+   With 5K A's, and after 'c' (continue) in the 1st terminal, in the 2nd terminal I got:
+Connecting to localhost (localhost)|127.0.0.1|:12198... connected.
+HTTP request sent, awaiting response... 500 Internal Error
+2015-03-07 07:16:52 ERROR 500: Internal Error.
+   With just 1 A, I got 404 error:
+HTTP request sent, awaiting response... 404 Not Found
+2015-03-07 07:46:15 ERROR 404: Not Found.
+   Without A, if I just use wget http://localhost:12198, I could get a index.html
+   Then I changed the two constants in the libhttpd.c from 2 to 20,000, and 5 to 50,000.
+   Then ./compile and make.
+   Also kept maxsize_expansion = 2, change size_expansion_times_4 = 50,000
+   and changed maxsize_expansion = 20,000, keep size_expansion_times_4 = 5.
+   All of these gave me 500 Internal Error when I use 5K or 30K A's.
+
+   I kept increasing the two constants, and later, I changed both of them to 999999999.
+   With Valgrind, I got below in the 1st terminal:
+   ==26972== Warning: silly arg (-1295422039) to realloc()
+==26972== 
+==26972== HEAP SUMMARY:
+==26972==     in use at exit: 129,091 bytes in 41 blocks
+==26972==   total heap usage: 62 allocs, 21 frees, 2,999,704,652 bytes allocated
+==26972== 
+==26972== 601 bytes in 1 blocks are definitely lost in loss record 4 of 12
+==26972==    at 0x402BE68: malloc (in /usr/lib/valgrind/vgpreload_memcheck-x86-linux.so)
+==26972==    by 0x804E3F5: httpd_realloc_str (libhttpd.c:707)
+==26972==    by 0x408E4D2: (below main) (libc-start.c:226)
+==26972== 
+==26972== LEAK SUMMARY:
+==26972==    definitely lost: 601 bytes in 1 blocks
+==26972==    indirectly lost: 0 bytes in 0 blocks
+==26972==      possibly lost: 0 bytes in 0 blocks
+==26972==    still reachable: 128,490 bytes in 40 blocks
+==26972==         suppressed: 0 bytes in 0 blocks
+==26972== Reachable blocks (those to which a pointer was found) are not shown.
+==26972== To see them, rerun with: --leak-check=full --show-reachable=yes
+==26972== 
+==26972== For counts of detected and suppressed errors, rerun with: -v
+==26972== ERROR SUMMARY: 1 errors from 1 contexts (suppressed: 0 from 0)
+[Inferior 1 (process 26972) exited with code 01]
+
+When I do backtrace, its shows no stack. From here, I got memory leak, and I found the server is crashed!
+I think the overflow tries to make the OS realloc correct memory but in the end the OS fails to do so, which
+caused memory leak.
+In the 2nd terminal, I got connection refused:
+Connecting to localhost (localhost)|127.0.0.1|:12190... failed: Connection refused.
+Resolving localhost (localhost)... 127.0.0.1
+Connecting to localhost (localhost)|127.0.0.1|:12190... failed: Connection refused.
+
+
+HW part2:
+
+VU#787252 (2015-02-13) Microsoft Windows domain-configured client Group Policy fails to authenticate servers
+High urgency
+Joining an attacker-controlled network, the vulnerable system will execute attacker-provided scripts since 
+the server is not required to authenticate itself. This is super dangerous since a remote, unauthenticated 
+attacker may execute arbitrary code and completely compromise vulnerable systems. Attackers may retrieve the 
+useful information like password, and other secret info. Users may lose all the data, which is miserable.
+
+VU#976132 (2015-01-05) Some UEFI systems do not properly secure the EFI S3 Resume Boot Path boot script
+High urgency
+Based on what’s described, the system may become unsafe at the first moment when it is started. A lot of 
+computers are using UEFI nowadays and the attackers have the access of SMRAM. So, after it is run, it might 
+be controlled totally by the attackers or become unoperatable, which will cause disasters. 
+
+VU#967332 (2015-01-28) GNU C Library (glibc) __nss_hostname_digits_dots() function vulnerable to buffer overflow
+Medium urgency
+The __nss_hostname_digits_dots() function allows a buffer overflow condition in which arbitrary code may be 
+executed. The impact may vary depending on if the use case is local or remote. This can be easily implemented by 
+attackers, but the damage might not be huge. I
+
+VU#252743 (2014-09-25) GNU Bash shell executes commands in exported functions in environment variables
+Medium urgency
+This vulnerability gives hackers privileges so that they can execute arbitrary code when calling application or 
+functions that sets environment variables. Its damage is limited for services and programs that users perform.  
+
+VU#695940 (2015-02-13) Henry Spencer regular expressions (regex) library contains a heap overflow vulnerability
+Low urgency
+As stated in CERT Vulnerability Notes Database, this vulnerability only happens in the process of enlarging in the 
+32 bit register/variable and cause overflow. Attacker may use this overflow to change data in memory. But we can’t 
+see any meaning for gain that attackers can have. Besides, only 32-bit operating systems are affected, and the 
+complete impact of this vulnerability is not yet known. We can mark the urgency of this vulnerability as low.

@@ -1,0 +1,115 @@
+1. I used the wget to download the 'coreutils' as:
+   wget http://www.cs.ucla.edu/classes/winter15/cs35L/assign/coreutils-with-bug.tar.gz
+2. I used the below command to uncompress the coreutils-with-bug.tar.gz
+   tar -xzvf coreutils-with-bug.tar.gz
+3. I went into the folder 'coreutils-with-bug' and run the below commands:
+   ./configure
+   After this, I used emacs to open the 'Makefile' and searched 'CFLAGS'
+   and saw 'CFLAGS = -g -O2'
+   Exit from 'Makefile', I rerun: ./configure CFLAGS="-g -O0", then
+   After that I tried to run the command 'make' to build this old 
+   version of coreutils, but it gave an error.
+4. I used the wget to get the patch file:
+   wget http://cs.ucla.edu/classes/winter15/cs35L/assign/coreutils.diff
+   Then inside the 'coreutils-with-bug' folder, I appiled the patch file as:
+   patch -p0 < ../coreutils.diff
+   The reason why the renaming patch fix them is that the patch fixes several 
+   function names (add coreutils_ before these functions) so that when it can
+   avoid some conflictions during the building process. 
+   After this, I run the command: make
+   In the src folder, I found the green execuatble 'ls'
+5. Based on the lab instruction, I run the below commands:
+   $ tmp=$(mktemp -d)
+   $ cd $tmp
+   $ touch -d '1918-11-11 11:00 GMT' wwi-armistice
+   $ touch now
+   $ sleep 1
+   $ touch now1
+   In this way, we built three files in the tmp folder, then I tried to
+   compare the two versions of 'ls', one of them is from the old version
+   of coreutils, and the other is from the system. In the tmp folder, I run:
+   ~/lab5/coreutils-with-bug/src/ls -lt --full-time wwi-armistice now now1
+   The result is as below:
+       -rw-r--r-- 1 guan csugrad 0 1918-11-11 03:00:00.000000000 -0800 wwi-armistice
+       -rw-r--r-- 1 guan csugrad 0 2015-02-02 13:19:52.698911796 -0800 now1
+       -rw-r--r-- 1 guan csugrad 0 2015-02-02 13:19:45.625656618 -0800 now
+   Then I run this: ls -lt --full-time wwi-armistice now now1
+   The result is as below:	
+	-rw-r--r-- 1 guan csugrad 0 2015-02-02 13:19:52.698911796 -0800 now1
+	-rw-r--r-- 1 guan csugrad 0 2015-02-02 13:19:45.625656618 -0800 now
+	-rw-r--r-- 1 guan csugrad 0 1918-11-11 03:00:00.000000000 -0800 wwi-armistice	
+   We can see that the old version of 'ls' in coreutils mistreated the wwi-armistice
+   as the newest file.
+6. I made a copy of 'ls.c' in the lab5 folder, just for the use of producing the patch later.
+   Then I used emacs to open the 'ls.c' file, and I Split the window into two halves by typing:
+   C-x 2
+   Then I Typed in: M-x gdb
+   and then 'gdb --anotate3 ./ls' to start the debug process
+7. Using the 'info functions', I saw a list of all the functions in the file.
+   Then I noticed a function called 'static void sort_files(void)', where might be the problem.
+   I set a break point in this function by 'b sort_files',
+   Then I started with the command 'run -lt --full-time /tmp/wwi-armistice /tmp/now /tmp/now1'
+   It tells me 'Breakpoint 1, sort_files () at ls.c:2962'   
+   Keep using 'n' and I found a function 'qsort (files, files_index, sizeof *files, func)'
+   I realized it's calling another function 'func', so I tried to print what the function 'func'
+   gives me, by:
+   (gdb) print func
+   $1 = (int (*)(V, V)) 0x405dfd <compare_mtime>
+   I guess 'compare_mtime' is the real function being called, so I set a breakpoint there by:
+   (gdb) b compare_mtime
+   Breakpoint 2 at 0x405e0d: file ls.c, line 2884.
+   I kept using 's' to step through each step until I reached a function 
+   'timespec_cmp (struct timespec a, struct timespec b)'
+   I tried to print the value of 'a.tv_sec', 'b.tv_sec' and 'diff'. However, there was a case
+   when 'a.tv_sec' is large positive number, 'b.tv_sec' is a large negtive numver,  but 'diff'
+   gives me a large negative number instead of a large positive number. This is the problem, and
+   the reason is the overflow. Based on  the function reqirement, "Return negative, zero, 
+   positive if A < B, A == B, A > B, respectively." Instead of using subtraction to compare two 
+   numbers, I just used '<' and '>' to compare. The code is as below:
+   timespec_cmp (struct timespec a, struct timespec b)
+{
+  int diff;
+  if(a.tv_sec > b.tv_sec)
+    diff=1;
+  else if (a.tv_sec < b.tv_sec)
+    diff=-1;
+  else
+  {
+    if(a.tv_nsec > b.tv_nsec)
+      diff=1;
+    else if (a.tv_nsec < b.tv_nsec)
+      diff=-1;
+    else
+      diff=0;
+  }
+  return diff;
+} 
+  Before making this change, I made a copy of timespec.h in my home directory and then I applied
+  the change and saved the file.
+8. With the modification, I rebuilt the new version of coreutils with 'make'
+9. Then I changed my directory to the 'tmp' directory by 'cd $tmp', and run the modified 'ls' by:
+   ~/lab5/coreutils-with-bug/src/ls -lt --full-time wwi-armistice now now1
+   It gives me the results as I expected:
+   -rw-r--r-- 1 guan csugrad 0 2015-02-04 10:36:07.823026765 -0800 now1
+   -rw-r--r-- 1 guan csugrad 0 2015-02-04 10:35:59.654720154 -0800 now
+   -rw-r--r-- 1 guan csugrad 0 1918-11-11 03:00:00.000000000 -0800 wwi-armistice
+10.With the original timespec.h and the modified timespec.h, I made the patch file by:
+   diff -u old_timespec.h timespec.h > lab5.diff
+11.In order to check if the patch works well, I created another folder and made a copy of the 
+   coreutils-with-bug.tar.gz and run the same process as step 3 and step 4.
+   Then I changed to the coreutils-with-bug/lib, inside this directory, I applied the patch:
+   patch < ../../lab5.diff
+   It tells me that "patching file timespec.h"
+   Then I rerun the 'make' and checked with the three files in the tem directory, and it worked well.
+12.In order to reproduce the problem in your home directory on the SEASnet Linux servers, I 
+   created a folder 'test' and created the three files in this directory.
+   Then I run the new-installed ls, and it gives me the below results:
+   -rw-r--r-- 1 guan csugrad 0 2054-12-17 09:28:16.000000000 -0800 wwi-armistice
+   -rw-r--r-- 1 guan csugrad 0 2015-02-04 11:23:36.259133000 -0800 now1
+   -rw-r--r-- 1 guan csugrad 0 2015-02-04 11:23:28.316152000 -0800 now  
+   The sorting result is right, but the date of 'wwi-armistice' was changed from 1918 to 2054.
+   As TA (Sharath) said, the reason for this is that the $tmp uses the 64-bit format, while in the
+   local home directory, it uses 32-bit. If a number in the 64 bit is negative, then the highest bit 
+   is 1(sign bit). When the change happens from 64 bit to 32 bit, all the bits from 32th to 63th will
+   be dropped and only keep the 0th to 31th bits, which end up with a positive number.(Another TA said
+   'tmp' and home directory on the SEASnet use different NFS).    

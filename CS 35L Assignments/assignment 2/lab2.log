@@ -1,0 +1,125 @@
+Guan Zhou
+604501750
+Lab 2 log
+
+1. When using the command locale, I didn't get LC_CTYPE="C" or 
+LC_CTYPE="POSIX", so I run the command: 
+   export LC_ALL='C'
+   and then I got the correct output.
+2. Using the command: sort -d /usr/share/dict/words > words.txt
+sort the contents of the file words and put the result into a 
+file named words in my seasnet directory.
+3. use wget to save the assignment2 page.
+wget http://cs.ucla.edu/classes/winter15/cs35L/assign/assign2.html assign2.html
+4.
+(1) tr -c 'A-Za-z' '[\n*]' < assign2.html
+   It will replace all the non-alphabetic characters (complements of alphas, 
+like space, number, special characters like . ! etc) with a new-line character.
+(2) tr -cs 'A-Za-z' '[\n*]' < assign2.html
+    -s: replace each input sequence of a repeated  character that  is  
+listed in SET1 with a single occurrence of that character
+    So this command will squeeze the extra new line character and replace 
+the adjacent non-alphabetic characters with only one new line character.
+(3) tr -cs 'A-Za-z' '[\n*]' < assign2.html | sort 
+    The difference between this output and the above output is that output 
+is in sorted order and for the same strings, uppercase comes first.
+(4) tr -cs 'A-Za-z' '[\n*]' < assign2.html | sort -u
+    -u means unique. The only difference of this output with the above output 
+is that this output has no duplicates (all the words are unique).
+(5) tr -cs 'A-Za-z' '[\n*]' < assign2.html | sort -u | comm - words 
+    comm: Compare sorted files FILE1 and FILE2 line by line. With  no  options, 
+the output  produce  three-column output.  Column one contains lines unique to 
+sorted assign2.html, column two contains lines unique to words, and column 
+three contains lines common to both assign2.html and words.
+(6) tr -cs 'A-Za-z' '[\n*]' < assign2.html | sort -u | comm -23 - words
+    -2: suppress column 2 (lines unique to FILE2) -3: suppress column 3
+    So the command compares assign2.html with words, and lists only the first 
+column, which are the lines unique to the assign2.html
+5. Use Wget to obtain a copy of that web page:
+   wget http://mauimapp.com/moolelo/hwnwdseng.htm hwnwdseng.htm
+   Below is the script code:
+   #!/bin/bash
+   select the word between <td> and </td> so we can get all the english and 
+Hawaiian Words:
+	grep -o "<td>.*</td>" \
+   change the uppercase characters to lowercase:
+	| tr '[:upper:]' '[:lower:]' \
+   delete all the <td> tag:
+        | sed 's/<td>//g' \
+   delete all the </td> tag:	   
+   	| sed 's/<\/td>//g' \
+   remove the blank lines:
+        | sed '/^$/d' \
+   delete all the <small> tag:
+	| sed 's/<small>//g' \
+   delete all the </small> tag:
+	| sed 's/<\/small>//g' \
+   delete all the <u> tag: 
+   	| sed 's/<u>//g' \
+   delete all the </u> tag:
+   	| sed 's/<\/u>//g' \
+   from the result choose the even lines, which are Hawaiian words
+   	| sed -n 0~2p \
+   replace ` with '	
+	| sed 's/`/\x27/g' \
+   check  spaces or commas, and treat words as multi words	
+	| sed 's/, /\n/g' \
+   	| sed 's/ /\n/g' \
+   check if words are proper Hawaiian words
+    	| grep -o ^[pk\'mnwlhaeiou]*$ \
+   sort words and remove duplicates
+   	| sort -u
+   Then I run the command:
+cat hwnwdseng.htm | ./buildwords | less > hwords
+to produce the "dictionary" file hwords that contains Hawaiian words.
+
+6.
+First, I first checked the Hawaiian dictionary against itself to make sure 
+hwords file is good by running:
+tr -cs "pk\'mnwlhaeiou" '[\n*]' < hwords | sort -u | comm -23 - hwords
+As I expected, there is no output when running the above command. 
+
+Then I checked the number of "misspelled" English words by running:
+tr -cs "A-Za-z" '[\n*]' < assign2.html | tr '[:upper:]' '[:lower:]' \
+| sort -u | comm -23 - words | wc -w
+I got 38 English words were "misspelled".
+
+Then I checked the number of "misspelled" Hawaiian words by running:
+tr -cs "A-Za-z" '[\n*]' < assign2.html | tr '[:upper:]' '[:lower:]' \
+| sort -u | comm -23 - hwords | wc -w
+I got 405 Hawaiian words were "misspelled".
+
+When comparing the results of the misspelled English or Hawaiian words, I 
+created two files to store the "misspelled" English and 
+"misspelled" Hawaiianwords. 
+The commands are as follows:
+tr -cs "A-Za-z" '[\n*]' < assign2.html | tr '[:upper:]' '[:lower:]' \
+| sort -u | comm -23 - words > misenglish
+tr -cs "A-Za-z" '[\n*]' < assign2.html | tr '[:upper:]' '[:lower:]' \
+| sort -u | comm -23 - hwords > mishawaiian
+
+Then I run the command:
+comm misenglish mishawaiian
+and I got three columns. The first column is the misspelled English not 
+misspelled Hawaiian word, and the second column is the misspelled Hawaiian 
+not misspelled Hawaiian word, and the third column is the both mispelled 
+English and misspelled Hawaiian word.
+
+Misspelled English:
+   halau
+   lau
+   wiki
+
+Misspelled Hawaiian:
+   also
+   detail   
+   fetch
+   locale
+   with
+
+Misspelled Both:
+   doctype
+   linux
+   td
+   usr
+   wget

@@ -1,0 +1,49 @@
+1. 
+I went to the folder /usr/local/cs/bin/ by:
+cd /usr/local/cs/bin/
+here I checked the version by: ./sort --version
+and I got the below result:
+sort (GNU coreutils) 8.23
+Copyright (C) 2014 Free Software Foundation, Inc.
+Therefore, this is the right version for the lab.
+Then I add /usr/local/cs/bin to PATH by:
+export PATH=/usr/local/cs/bin:$PATH
+2.
+I used the below command to generate the 10,000,000 random 
+double-precision floating point numbers:
+od -An -t f -N 80000000 < /dev/urandom | tr -s ' ' '\n' > random.txt
+where -An removes the addresses given by od  
+ -t f indicates that we want a double precision floating point number. 
+ -N 80000000 gives the size of 80M bytes  sinceeach double takes 8 bytes.
+3. 
+I used cat random.txt | wc -l to check the line number, and I got 10000001,
+then I used emacs to open random.txt and I found the first line was empty.
+I mannually deleted that empty line and got right line number.
+4. 
+Measure the time took with sort:
+time -p sort -g --parallel=N random.txt > /dev/null 
+where N is the number of threads
+For 1 thread:
+    real 179.64
+    user 178.99
+    sys 0.56
+
+For 2 threads:
+    real 93.42
+    user 178.69
+    sys 0.26
+
+For 4 threads:
+    real 52.38
+    user 179.45
+    sys 0.32
+
+For 8 threads:
+    real 34.83
+    user 187.37
+    sys 0.40
+
+From above results, we can see that there is a significant time improvement with the increasing 
+number of threads. The real time is alomost reduced halfly as number of threads doubles, although 
+this improvement is not exactly proportional, but pretty close to. The user times seems to be 
+growing since more threads will require more user buffer. I don't see the pattern for the sys time. 
